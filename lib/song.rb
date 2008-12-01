@@ -7,6 +7,6 @@ class Song < RubySqueeze::Item
   end
 
   def by_artist(artist)
-    invoke "tracks 0 5000 tags:tae artist_id:#{artist.id}"
+    invoke "tracks 0 5000 artist_id:#{artist.id}"
   end
 end

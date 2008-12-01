@@ -1,8 +1,8 @@
 require 'net/telnet'
 
 module RubySqueeze
+  
   class SqueezeServer
-    attr_reader :host, :port, :api, :connection
     
     class << self
       def connection
@@ -17,9 +17,9 @@ module RubySqueeze
     def initialize(opts = {})
       host     = opts[:host]     ? opts[:host]        : "localhost"
       port     = opts[:port]     ? opts.delete(:port) : 9000
-      api_port = opts[:api_port] ? opts[:api_port] : 9090
-      username = opts[:username] ? opts[:username] : nil
-      password = opts[:password] ? opts[:password] : nil
+      api_port = opts[:api_port] ? opts[:api_port]    : 9090
+      username = opts[:username] ? opts[:username]    : nil
+      password = opts[:password] ? opts[:password]    : nil
       
       @@connection = raw_connection(host, api_port)
 
@@ -29,14 +29,7 @@ module RubySqueeze
       @connected = true
     end
   
-    def raw_connection(host, port)
-      Net::Telnet::new("Host" => host, "Port" => port, "Telnetmode" => false, "Prompt" => /\n/)
-    end
-    
-    def authenticate(username, password)
-      @@connection.cmd("login #{username} #{password}")
-    end
-
+    # Send the +command+ to the API +connection+
     def invoke(command, urldecode=true)
       cleaned_command = command.gsub('?', '').strip
       puts "COMMAND:      #{command}"
@@ -88,7 +81,9 @@ module RubySqueeze
     
     # Searches for the passed +query+ and returns a Hash
     # containing the found artists, albums and tracks.
-    def search(query, item_type=nil, limit = 10000)
+    def search(query, opts={})
+      item_type = opts.delete(:type)
+      limit = opts[:limit] ? opts.delete(:limit) : 10000
       res = invoke("search 0 #{limit} term:#{query}", false)
       return nil unless res
     
@@ -98,36 +93,42 @@ module RubySqueeze
         key = count[1].nil? ? 'count' : count[1].gsub(/_/,'')
         hash[:counts][key.to_sym] = count.last.to_i
       end    
-    
+      
+      raise "Invalid item_type passed" if !item_type.nil? and ![:song, :artist, :album, :genre, :year].include?(item_type)    
+      
       # Group each individual type of each result into a hash
       %w(album track contributor genre).each do |type|
+        next unless item_type.nil? or item_type != type
         key = type == 'contributor' ? :artist : type.to_sym
         hash[key] = Hash[*res.scan(/(#{type}_id%3A\w+ #{type}%3A[\w%\d]+)/).flatten.collect{|r| r.split(/\s/).collect{|a| a.gsub(/#{type}.*%3A/, '').urldecode} }.flatten]
       end
 
-      if item_type
-        item_type = item_type.sym
-        raise "Invalid item_type passed" unless [:song, :artist, :album, :genre, :year].include?(item_type)
-        hash[item_type]
-      else
-        hash
-      end
     end
   
     protected
-      def scan_for_players
-        @players = []
-        player_count = invoke("player count ?").to_i
-        player_count.times do |x|
-          player_id = invoke("player id #{x-1} ?")
-          @players << RubySqueeze::Player.new(@api, player_id)
-        end
-        @players
+    def scan_for_players
+      @players = []
+      player_count = invoke("player count ?").to_i
+      player_count.times do |x|
+        player_id = invoke("player id #{x-1} ?")
+        @players << RubySqueeze::Player.new(@api, player_id)
       end
+      @players
+    end
+  
+    def artwork_path(track_id, type)
+      "http://#{@host}:#{@port}/music/#{track_id}/#{type}.jpg"
+    end
     
-      def artwork_path(track_id, type)
-        "http://#{@host}:#{@port}/music/#{track_id}/#{type}.jpg"
-      end
+    private
+    def raw_connection(host, port)
+      Net::Telnet::new("Host" => host, "Port" => port, "Telnetmode" => false, "Prompt" => /\n/)
+    end
+    
+    def authenticate(username, password)
+      @@connection.cmd("login #{username} #{password}")
+    end
+    
   end
 
   class AuthenticationError < Exception; end
