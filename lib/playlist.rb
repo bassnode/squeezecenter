@@ -69,14 +69,18 @@ class RubySqueeze::Playlist
   def currently_playing
     playlist_query("index").to_i
   end
-    
+  
+  def newsong
+    @api.invoke("#{@player.id} playlist newsong")    
+  end
+  
   protected
     def playlist_query(query)
-      @api.invoke("#{@player.id} playlist #{query} ?")
+      @api.invoke("#{@player.id} playlist #{query} ?", false)
     end
     
     def playlist_command(command)
-      @api.invoke("#{@player.id} #{command}")
+      @api.invoke("#{@player.id} #{command}", false)
     end
     
     def playlist_control(command, opts={})

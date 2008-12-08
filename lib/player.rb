@@ -84,10 +84,10 @@ class RubySqueeze::Player
   
   protected
     def player_query(query)
-      @api.invoke("player #{query} #{@id} ?")
+      @api.invoke("player #{query} #{@id} ?", false)
     end
     
     def player_command(command)
-      @api.invoke("#{@id} #{command}")
+      @api.invoke("#{@id} #{command}", false)
     end
 end

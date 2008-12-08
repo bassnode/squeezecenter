@@ -1,4 +1,5 @@
 module RubySqueeze
+  require "facets"  
   
   class Item
     attr_reader :id, :name, :attributes
@@ -38,28 +39,36 @@ module RubySqueeze
         offset = opts[:offset] ? opts.delete(:offset) : 0
         by_id = opts.keys.map{|k| k.to_s}.grep(/(.+)_id$/).first
         if by_id.nil?
-          
+          raise "Can't run - no *_id opts passed!"
         else
           clause = "#{by_id}:#{opts[by_id.to_sym]}"
+          "#{self.api_name.pluralize} #{offset} #{limit} #{clause}"
         end
-        "#{self.api_name.pluralize} #{offset} #{limit} #{clause}"
+        
       end
       
       def find(opts)
         query = query_from_opts(opts)
         res = invoke(query, false)
+        
+        puts "SEARCH RES: #{res}"
         return nil unless res
 
         ret = []
-        res.scan(/(id%3A\w+ #{self.api_name}%3A[\w%\d]+)/).each do |line|
-          i = line.first.split(/\s/)
-          #@FIXME This breaks on items with spaces in their names!!
-          attrs = Hash[*i.map{ |p| p.split('%3A')}.flatten].symbolize_keys
-          attrs[:name] = attrs[self.api_name.to_sym]
-          attrs.delete(self.api_name.to_sym)
-          attrs.delete(:count) # uneeded
-          ret << self.new(attrs)
+        # Make a grouped hash from the results 
+        hash = res.split(' ').group_by do |a|
+          a.split('%3A').first
         end
+        
+        # Create an object for each result
+        hash['id'].size.times do |n|
+          attrs = {}
+          hash.each do |key, vals|
+            attrs[key] = vals[n].nil? ? nil : vals[n].split(/%3A/).last.urldecode
+          end
+          ret << self.new(attrs.symbolize_keys)
+        end
+
         if opts[:first]
           ret.first
         else
@@ -71,7 +80,13 @@ module RubySqueeze
     
     def initialize(attributes={})
       @id = attributes.delete(:id).to_i if attributes[:id]
-      @name = attributes.delete(:name)
+      @name = attributes.delete(:name) || attributes.delete(:title)
+      
+      # Maybe just for Song here?
+      @duration = attributes.delete(:duration).to_f
+      @album = attributes.delete(:album)
+      @artist = attributes.delete(:artist)
+      @genre = attributes.delete(:genre)
     end
     
     # So each instance can access the API connection
@@ -88,7 +103,7 @@ module RubySqueeze
     # Returns the total number of records
     # for the current item type.
     def self.count
-      invoke "info total #{api_name} ?"
+      invoke "info total #{api_name.pluralize} ?"
     end
   end
   

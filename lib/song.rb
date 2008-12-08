@@ -1,6 +1,5 @@
 class Song < RubySqueeze::Item
   attr_reader :artist, :album, :genre
-  
 
   def [](attribute)
     attributes[attribute]

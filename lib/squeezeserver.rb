@@ -15,13 +15,13 @@ module RubySqueeze
     end
 
     def initialize(opts = {})
-      host     = opts[:host]     ? opts[:host]        : "localhost"
-      port     = opts[:port]     ? opts.delete(:port) : 9000
+      @host     = opts[:host]     ? opts[:host]        : "localhost"
+      @port     = opts[:port]     ? opts.delete(:port) : 9000
       api_port = opts[:api_port] ? opts[:api_port]    : 9090
       username = opts[:username] ? opts[:username]    : nil
       password = opts[:password] ? opts[:password]    : nil
       
-      @@connection = raw_connection(host, api_port)
+      @@connection = raw_connection(@host, api_port)
 
       authenticate(username, password) unless username.nil? and password.nil? 
       
@@ -111,7 +111,7 @@ module RubySqueeze
       player_count = invoke("player count ?").to_i
       player_count.times do |x|
         player_id = invoke("player id #{x-1} ?")
-        @players << RubySqueeze::Player.new(@api, player_id)
+        @players << RubySqueeze::Player.new(self, player_id)
       end
       @players
     end
