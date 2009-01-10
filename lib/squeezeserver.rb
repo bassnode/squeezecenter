@@ -75,13 +75,15 @@ module RubySqueeze
     # Get the number of +type+ in the system.
     # Valid +types+ include songs, artists, albums, genres
     def total(type='songs')
-      raise "Invalid type passed" unless %w(songs artists albums genres).include?(type)
+      type = 'songs' if type == 'tracks'
+      raise "Invalid type passed" unless %w(tracks artists albums genres).include?(type)
       invoke("info total #{type} ?")
     end
     
+    # TODO: Make this more robust when results contain spaces!
     # Searches for the passed +query+ and returns a Hash
     # containing the found artists, albums and tracks.
-    def search(query, opts={})
+    def total_search(query, opts={})
       item_type = opts.delete(:type)
       limit = opts[:limit] ? opts.delete(:limit) : 10000
       res = invoke("search 0 #{limit} term:#{query}", false)
@@ -94,17 +96,42 @@ module RubySqueeze
         hash[:counts][key.to_sym] = count.last.to_i
       end    
       
-      raise "Invalid item_type passed" if !item_type.nil? and ![:song, :artist, :album, :genre, :year].include?(item_type)    
+      raise "Invalid item_type passed: #{item_type}" if !item_type.nil? and ![:track, :artist, :album, :genre, :year].include?(item_type)
       
       # Group each individual type of each result into a hash
       %w(album track contributor genre).each do |type|
         next unless item_type.nil? or item_type != type
         key = type == 'contributor' ? :artist : type.to_sym
-        hash[key] = Hash[*res.scan(/(#{type}_id%3A\w+ #{type}%3A[\w%\d]+)/).flatten.collect{|r| r.split(/\s/).collect{|a| a.gsub(/#{type}.*%3A/, '').urldecode} }.flatten]
+        hash[key] = Hash[*res.scan(/(#{type}_id%3A\w+ #{type}%3A[\w%\d]+)/).flatten.collect{ |r| 
+          arr = r.split(/\s/).collect{|a| 
+            a.gsub(/#{type}.*%3A/, '').urldecode
+          } 
+          Object.const_get(item_type.to_s.classify).new(:id => arr.first, :name => arr[1])
+        }.flatten]
+        
       end
-
+      hash
     end
-  
+    
+    def search(query, opts={})
+      type = opts.delete(:type)
+      klass = Object.const_get(type.to_s.classify)
+      
+      limit = opts[:limit] ? opts.delete(:limit) : 10000
+      res = invoke("search 0 #{limit} term:#{query}", false)
+      return nil unless res
+    
+      out = res.scan(/(#{klass.api_name}_id%3A\w+ #{klass.api_name}%3A[\w%\d]+)/).flatten.collect{ |r| 
+        arr = r.split(/\s/).collect{|a| 
+          a.gsub(/#{type}.*%3A/, '').urldecode
+        } 
+        # Create an object for each result
+        klass.new(:id => arr.first, :name => arr[1])
+      }.flatten
+      
+      limit==1 ? out.first : out
+    end
+    
     protected
     def scan_for_players
       @players = []

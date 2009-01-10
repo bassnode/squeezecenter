@@ -13,6 +13,10 @@ module RubySqueeze
         @api_name || self.to_s.downcase
       end
       
+      def api_name=(name)
+        @api_name = name
+      end
+      
       def connection
         if !connected?
           puts "Connecting"
@@ -74,6 +78,11 @@ module RubySqueeze
         else
           ret
         end
+      end
+      
+      
+      def search(term, opts={})
+        connection.search(term, opts.merge(:type => api_name.to_sym))
       end
       
     end #class methods

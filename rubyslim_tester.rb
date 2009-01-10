@@ -1,4 +1,3 @@
-require 'rubygems'
 require 'lib/rubysqueeze'
 require "pp"
 
