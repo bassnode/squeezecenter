@@ -1,5 +1,7 @@
 require 'cgi'
 module RubySqueeze
+  require "rubygems"
+  require "facets"  
   require File.dirname(__FILE__) + '/core_extensions'
   require File.dirname(__FILE__) + '/squeezeserver'
   require File.dirname(__FILE__) + '/player'

@@ -5,7 +5,13 @@ class RubySqueeze::Playlist
   end
   
   def tracks
-    playlist_query("tracks 0 1000")
+    #playlist_query("tracks 0 1000")
+    (0..total_tracks-1).inject([]) do |accum, t|
+      accum << Track.new( :artist => track_information(:artist, t), 
+                          :album => track_information(:album, t),
+                          :name => track_information(:title, t))
+    end
+    
   end
   
   def total_tracks
@@ -30,6 +36,23 @@ class RubySqueeze::Playlist
   
   def current_mode
     @api.invoke("#{@player.id} mode ?")
+  end
+  
+  # Randomizes current playlist in a way that tries not to
+  # allow the same Artist 2 songs in a row.
+  # NOTE: Currently doesn't actually replace playlist.
+  def randomize
+    original_list = tracks
+    song_count = original_list.size
+    new_list = [original_list.shift]
+    idx = 0
+    until original_list.empty? do
+      idx = rand(song_count) until original_list[idx] && new_list.last.artist != original_list[idx].artist
+      new_list << original_list[idx]
+      original_list.delete_at(idx)         
+    end
+#    clear
+    new_list
   end
   
   # Replaces current playlist with passed +opts+, eg:

@@ -1,5 +1,4 @@
 module RubySqueeze
-  require "facets"  
   
   class Item
     attr_reader :id, :name, :attributes
@@ -91,7 +90,7 @@ module RubySqueeze
       @id = attributes.delete(:id).to_i if attributes[:id]
       @name = attributes.delete(:name) || attributes.delete(:title)
       
-      # Maybe just for Song here?
+      # Maybe just for Track here?
       @duration = attributes.delete(:duration).to_f
       @album = attributes.delete(:album)
       @artist = attributes.delete(:artist)
