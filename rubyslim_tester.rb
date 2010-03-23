@@ -8,3 +8,7 @@ puts Track.count
 puts Artist.count
 puts Album.connection.inspect
 
+def reload(filename)
+  $".delete(filename + ".rb")
+  require(filename)
+end

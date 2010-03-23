@@ -44,10 +44,15 @@ class RubySqueeze::Playlist
   def randomize
     original_list = tracks
     song_count = original_list.size
+    attempt_threshold = (song_count * 0.33).floor # so we don't spin forever
     new_list = [original_list.shift]
     idx = 0
     until original_list.empty? do
-      idx = rand(song_count) until original_list[idx] && new_list.last.artist != original_list[idx].artist
+      attempts = 0
+      until attempts >= attempt_threshold || (original_list[idx] && new_list.last.artist != original_list[idx].artist)
+        idx = rand(song_count)   
+        attempts +=1
+      end
       new_list << original_list[idx]
       original_list.delete_at(idx)         
     end
